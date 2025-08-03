@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 import yt_dlp
 
-urls = []
+urls = ['https://www.youtube.com/shorts/5A62z967b0Y']
 
-path = Path('videos')
+path = Path('../videos')
 path.mkdir(exist_ok=True)
 entries_file = path / 'entries.json'
 entries_file.touch()
