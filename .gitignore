@@ -3,3 +3,5 @@ venv
 videos
 audios
 try.ipynb
+src/demo.ipynb
+*/__pycache__

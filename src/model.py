@@ -1,9 +1,11 @@
+import numpy as np
+
 import torch
 from pyannote.audio import Audio
 from pyannote.core import Segment
 from pyannote.audio.pipelines.speaker_verification import PretrainedSpeakerEmbedding
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from . import utils
+import utils
 
 class TranscriptionModel():
     def __init__(self, model_name):
@@ -41,8 +43,8 @@ class TranscriptionModel():
         path = utils.get_wav_path(m_id)
         result = self.pipe(path)
         transcripts = result["text"]
-        timestamps = result["chunks"]
-        return transcripts, timestamps
+        chunks = result["chunks"]
+        return transcripts, chunks
         
 
 class DiarizationModel:
@@ -56,8 +58,32 @@ class DiarizationModel:
         else:
             self.device = "cpu"
             self.torch_dtype = torch.float32
-
+        
+        self.audio = Audio()
         self.model = PretrainedSpeakerEmbedding(
             "speechbrain/spkrec-ecapa-voxceleb",
             device=self.device
         )
+
+    def diarization(self, m_id, chunks, num_speakers):
+        num_speakers = min(max(round(num_speakers), 1), len(chunks))
+        if len(chunks) == 1:
+            chunks[0]["speaker"] = "SPEAKER 1"
+        else:
+            path = utils.get_wav_path(m_id)
+            duration = utils.get_duration(path)
+            embeddings = np.zeros(shape=(len(chunks), 192))
+            for i, chunk in enumerate(chunks):
+                start = chunk["timestamp"][0]
+                # whisper sometimes overshoots end timestamp of last chunk
+                end = min(duration, chunk["timestamp"][1])
+                clip = Segment(start, end)
+                waveform, _ = self.audio.crop(path, clip)
+                # we need mono channel audio
+                print(waveform.shape)
+                if waveform.shape[0] > 1:
+                    waveform = waveform.mean(axis=0, keepdim=True)
+                print(waveform.shape)
+                embeddings[i] = self.model(waveform[None]) # batch_size, num_channels, num_samples = waveforms.shape req
+                print(embeddings[i].shape, embeddings.shape)
+            embeddings = np.nan_to_num(embeddings)
