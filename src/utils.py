@@ -5,24 +5,25 @@ import wave
 import contextlib
 
 def get_wav_path(m_id):
-    audio_path = f"../audios/{m_id}.wav"
-    video_path = f"../videos/{m_id}.mp4"
+    path = str(Path(__file__).parent.parent)
+    audio_path = f"{path}/audios/{m_id}.wav"
+    video_path = f"{path}/videos/{m_id}.mp4"
     
     if not Path(video_path).exists():
-        print(f"video file {video_path} doesnt exist")
+        print(f"video file {m_id}.mp4 doesnt exist")
         return
         
     if Path(audio_path).exists():
-        print(f"audio file {audio_path} already exists")
+        print(f"audio file {m_id}.wav already exists")
         return audio_path
     else:
         command = f"ffmpeg -i {video_path} {audio_path}"
         try:
             _ = subprocess.run(command, shell=True, capture_output=True)
-            print(f"audio file {audio_path} created")
+            print(f"audio file {m_id}.wav created")
             return audio_path
         except:
-            print(f"couldn't convert {video_path} video to .wav format")
+            print(f"couldn't convert {m_id}.mp4 video to .wav format")
             return
 
 def get_duration(path):

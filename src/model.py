@@ -1,5 +1,6 @@
+import datetime
 import numpy as np
-
+from sklearn.cluster import AgglomerativeClustering, DBSCAN
 import torch
 from pyannote.audio import Audio
 from pyannote.core import Segment
@@ -80,10 +81,26 @@ class DiarizationModel:
                 clip = Segment(start, end)
                 waveform, _ = self.audio.crop(path, clip)
                 # we need mono channel audio
-                print(waveform.shape)
+                # print(waveform.shape)
                 if waveform.shape[0] > 1:
                     waveform = waveform.mean(axis=0, keepdim=True)
-                print(waveform.shape)
+                # print(waveform.shape)
                 embeddings[i] = self.model(waveform[None]) # batch_size, num_channels, num_samples = waveforms.shape req
-                print(embeddings[i].shape, embeddings.shape)
+                # print(embeddings[i].shape, embeddings.shape)
             embeddings = np.nan_to_num(embeddings)
+        
+            # add speaker labels
+            clustering = AgglomerativeClustering(num_speakers).fit(embeddings)
+            # clustering = DBSCAN().fit(embeddings)
+            labels = clustering.labels_
+            for i in range(len(chunks)):
+                chunks[i]["speaker"] = f"SPEAKER {(labels[i]+1)}"
+
+            output = ""
+            for (i, chunk) in enumerate(chunks):
+                if i==0 or chunks[i-1]["speaker"] != chunk["speaker"]:
+                    if i!= 0:
+                        output += "\n\n"
+                    output += chunk["speaker"] + " " + str(datetime.timedelta(seconds=round(chunk["timestamp"][0]))) + "\n\n"
+                output += chunk["text"][1:] + " "
+            return output

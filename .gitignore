@@ -4,4 +4,4 @@ videos
 audios
 try.ipynb
 src/demo.ipynb
-*/__pycache__
+__pycache__/
