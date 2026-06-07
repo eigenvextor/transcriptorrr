@@ -8,7 +8,7 @@ path.mkdir(exist_ok=True, parents=True)
 entries = path / 'entries.json'
 entries.touch()
 
-media_url = "https://www.youtube.com/shorts/E1sPz4bFGB4"
+media_url = ""
 media_id = media_url.split('/')[-1].split('=')[-1]
 
 with open(entries) as f:

@@ -1,7 +1,6 @@
 venv
 .DS_Store
-videos
-audios
+media
 try.ipynb
 src/demo.ipynb
 __pycache__/

@@ -4,7 +4,8 @@ from sklearn.cluster import AgglomerativeClustering, DBSCAN
 import torch
 from pyannote.audio import Audio
 from pyannote.core import Segment
-from pyannote.audio.pipelines.speaker_verification import PretrainedSpeakerEmbedding
+# from pyannote.audio.pipelines.speaker_verification import SpeechBrainPretrainedSpeakerEmbedding
+from speechbrain.inference.speaker import EncoderClassifier
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 import utils
 
@@ -22,7 +23,7 @@ class TranscriptionModel():
 
         self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
                 model_name,
-                torch_dtype=self.torch_dtype,
+                dtype=self.torch_dtype,
                 low_cpu_mem_usage=True,
                 use_safetensors=True
         ).to(self.device)
@@ -34,10 +35,22 @@ class TranscriptionModel():
                 model=self.model,
                 tokenizer=self.processor.tokenizer,
                 feature_extractor=self.processor.feature_extractor,
-                torch_dtype=self.torch_dtype,
+                dtype=self.torch_dtype,
                 device=self.device,
                 return_timestamps=True
         )
+
+        # self.pipe = pipeline(
+        #     "automatic-speech-recognition",
+        #     model=model_name,
+        #     torch_dtype=self.torch_dtype,
+        #     device=self.device,
+        #     return_timestamps=True,
+        #     model_kwargs={
+        #         "low_cpu_mem_usage": True, 
+        #         "use_safetensors": True
+        #     }
+        # )
         
 
     def transcribe(self, m_id):
@@ -61,10 +74,14 @@ class DiarizationModel:
             self.torch_dtype = torch.float32
         
         self.audio = Audio()
-        self.model = PretrainedSpeakerEmbedding(
-            "speechbrain/spkrec-ecapa-voxceleb",
-            device=self.device
+        self.model = EncoderClassifier.from_hparams(
+            source="speechbrain/spkrec-ecapa-voxceleb",
+            # device=self.device
         )
+        # self.model = SpeechBrainPretrainedSpeakerEmbedding(
+        #     embedding = "speechbrain/spkrec-ecapa-voxceleb",
+        #     device=self.device
+        # )
 
     def diarization(self, m_id, chunks, num_speakers):
         num_speakers = min(max(round(num_speakers), 1), len(chunks))
@@ -85,7 +102,7 @@ class DiarizationModel:
                 if waveform.shape[0] > 1:
                     waveform = waveform.mean(axis=0, keepdim=True)
                 # print(waveform.shape)
-                embeddings[i] = self.model(waveform[None]) # batch_size, num_channels, num_samples = waveforms.shape req
+                embeddings[i] = self.model.encode_batch(waveform) # batch_size, num_channels, num_samples = waveforms.shape req
                 # print(embeddings[i].shape, embeddings.shape)
             embeddings = np.nan_to_num(embeddings)
         

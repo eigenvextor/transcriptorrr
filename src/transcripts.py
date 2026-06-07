@@ -1,9 +1,11 @@
+from model import DiarizationModel, TranscriptionModel
 
-import subprocess
-from pathlib import Path
-import wave
-import contextlib
+whisper_model_id = "openai/whisper-medium.en"
+tmodel = TranscriptionModel(whisper_model_id)
+dmodel = DiarizationModel()
 
-from pyannote.audio import Pipeline
+media_id = str(input("Type media-id: "))
+transcripts, timestamps = tmodel.transcribe(media_id)
 
-
+result = dmodel.diarization(media_id, timestamps, 2)
+print(result)
