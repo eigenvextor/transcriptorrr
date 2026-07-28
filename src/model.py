@@ -4,7 +4,6 @@ from sklearn.cluster import AgglomerativeClustering, DBSCAN
 import torch
 from pyannote.audio import Audio
 from pyannote.core import Segment
-# from pyannote.audio.pipelines.speaker_verification import SpeechBrainPretrainedSpeakerEmbedding
 from speechbrain.inference.speaker import EncoderClassifier
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 import utils
@@ -21,36 +20,17 @@ class TranscriptionModel():
             self.device = "cpu"
             self.torch_dtype = torch.float32
 
-        self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
-                model_name,
-                dtype=self.torch_dtype,
-                low_cpu_mem_usage=True,
-                use_safetensors=True
-        ).to(self.device)
-
-        self.processor = AutoProcessor.from_pretrained(model_name)
-        
         self.pipe = pipeline(
-                "automatic-speech-recognition",
-                model=self.model,
-                tokenizer=self.processor.tokenizer,
-                feature_extractor=self.processor.feature_extractor,
-                dtype=self.torch_dtype,
-                device=self.device,
-                return_timestamps=True
+            "automatic-speech-recognition",
+            model=model_name,
+            torch_dtype=self.torch_dtype,
+            device=self.device,
+            return_timestamps=True,
+            model_kwargs={
+                "low_cpu_mem_usage": True, 
+                "use_safetensors": True # needed along w low_cpu_mem_usage for performance
+            }
         )
-
-        # self.pipe = pipeline(
-        #     "automatic-speech-recognition",
-        #     model=model_name,
-        #     torch_dtype=self.torch_dtype,
-        #     device=self.device,
-        #     return_timestamps=True,
-        #     model_kwargs={
-        #         "low_cpu_mem_usage": True, 
-        #         "use_safetensors": True
-        #     }
-        # )
         
 
     def transcribe(self, m_id):
@@ -76,14 +56,10 @@ class DiarizationModel:
         self.audio = Audio()
         self.model = EncoderClassifier.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
-            # device=self.device
+            # run_opts={"device": self.device}
         )
-        # self.model = SpeechBrainPretrainedSpeakerEmbedding(
-        #     embedding = "speechbrain/spkrec-ecapa-voxceleb",
-        #     device=self.device
-        # )
 
-    def diarization(self, m_id, chunks, num_speakers):
+    def diarization(self, m_id, chunks, num_speakers, metric="euclidean", linkage="ward"):
         num_speakers = min(max(round(num_speakers), 1), len(chunks))
         if len(chunks) == 1:
             chunks[0]["speaker"] = "SPEAKER 1"
@@ -91,23 +67,34 @@ class DiarizationModel:
             path = utils.get_wav_path(m_id)
             duration = utils.get_duration(path)
             embeddings = np.zeros(shape=(len(chunks), 192))
+            print(f"duration: {duration}")
+            false_ids = []
             for i, chunk in enumerate(chunks):
                 start = chunk["timestamp"][0]
                 # whisper sometimes overshoots end timestamp of last chunk
                 end = min(duration, chunk["timestamp"][1])
-                clip = Segment(start, end)
-                waveform, _ = self.audio.crop(path, clip)
-                # we need mono channel audio
-                # print(waveform.shape)
-                if waveform.shape[0] > 1:
-                    waveform = waveform.mean(axis=0, keepdim=True)
-                # print(waveform.shape)
-                embeddings[i] = self.model.encode_batch(waveform) # batch_size, num_channels, num_samples = waveforms.shape req
-                # print(embeddings[i].shape, embeddings.shape)
+                # print(i, start, end)
+                if start <= end:
+                    clip = Segment(start, end)
+                    waveform, _ = self.audio.crop(path, clip)
+                    # we need mono channel audio
+                    # print(f"waveform shape: {waveform.shape}")
+                    if waveform.shape[0] > 1:
+                        waveform = waveform.mean(axis=0, keepdim=True)
+                    # print(f"waveform shape: {waveform.shape}")
+                    embeddings[i] = self.model.encode_batch(waveform) # batch_size, num_channels, num_samples = waveforms.shape req
+                    # print(f"embeddings[i]: {embeddings[i].shape}, embeddings: {embeddings.shape}")
+                else:
+                    print(f"WARNING: {i}, {chunk}")
+                    false_ids.append(i)
+            print(embeddings.shape)
             embeddings = np.nan_to_num(embeddings)
-        
+            embeddings = np.delete(embeddings, false_ids, axis=0)
+            chunks = [chunk for i, chunk in enumerate(chunks) if i not in false_ids]
+            print(embeddings.shape)
+
             # add speaker labels
-            clustering = AgglomerativeClustering(num_speakers).fit(embeddings)
+            clustering = AgglomerativeClustering(num_speakers, metric=metric, linkage=linkage).fit(embeddings)
             # clustering = DBSCAN().fit(embeddings)
             labels = clustering.labels_
             for i in range(len(chunks)):

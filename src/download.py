@@ -28,8 +28,10 @@ title_command = [
 
 result = subprocess.run(title_command, capture_output=True, text=True)
 media_title = result.stdout.strip()
+print("Title of the media: ", media_title)
 
 if media_id not in data.keys():
+    print("Downloading media...")
     command = [
         "yt-dlp",
         "--js-runtimes", "node",
@@ -37,7 +39,7 @@ if media_id not in data.keys():
         "--remote-components", "ejs:github",
         "-P", f"{path}",
         "-o", f"{media_id}.%(ext)s",
-        "-q", # quiet mode
+        # "-q", # quiet mode
         media_url
     ]
 
