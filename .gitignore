@@ -1,6 +1,5 @@
 venv
 .DS_Store
 media
-try.ipynb
-src/demo.ipynb
 __pycache__/
+.flaskenv

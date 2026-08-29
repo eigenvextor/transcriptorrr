@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>hello!</h1>
+    <table class="clean-table">
+        <thead>
+            <tr>
+                <th>id</th>
+                <th>media id</th>
+                <th>media title</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in data%}
+            <tr>
+                <td>{{ d.id }}</td>
+                <td>{{ d.media_id }}</td>
+                <td>{{ d.title }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

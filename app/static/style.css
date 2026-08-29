@@ -1,0 +1,27 @@
+.clean-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: sans-serif;
+    text-align: left;
+}
+
+/* add spacing */
+.clean-table th, 
+.clean-table td {
+    padding: 12px 20px;
+    border-top: 1px solid #000000;
+    border-bottom: 1px solid #000000;
+}
+
+#status-banner{
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    background-color: #2196F3;
+    color: white; 
+    text-align: center; 
+    padding: 10px; 
+    z-index: 9999;
+}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="POST" action="/generate-transcripts">
+    <input type="text" name="media_url" placeholder="enter youtube url" required>
+    <input type="text" name="no_speakers" placeholder="enter no of speakers">
+    <button type="submit">generate</button>
+</form>
+
+{% if message %}
+    <p>{{ message }}</p>
+{% endif %}
+
+{% if is_downloading %}
+    <script>
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000); 
+    </script>
+{% endif %}
+
+{% endblock %}

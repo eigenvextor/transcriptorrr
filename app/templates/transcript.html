@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Transcript for Video: {{ video_id }}</h2>
+
+<!-- display error if json parsing fails on POST -->
+{% if error %}
+    <div style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 20px;">
+        <strong>Error saving:</strong> {{ error }}
+    </div>
+{% endif %}
+
+<!-- edit mode -->
+{% if mode == 'edit' %}
+    <form method="POST" action="{{ url_for('handle_transcript', video_id=video_id) }}">
+        <!-- large textarea for editing raw json -->
+        <textarea name="transcript_data" rows="30" style="width: 100%; font-family: monospace;">{{ data_str }}</textarea>
+        <br><br>
+        <button type="submit">Save Changes</button>
+        <!-- cancel button routes back to the view mode -->
+        <a href="{{ url_for('handle_transcript', video_id=video_id) }}"><button type="button">Cancel</button></a>
+    </form>
+
+<!-- view mode -->
+{% else %}
+    <!-- edit button sends a GET request with ?mode=edit -->
+    <a href="{{ url_for('handle_transcript', video_id=video_id, mode='edit') }}">
+        <button style="margin-bottom: 20px;">Edit JSON</button>
+    </a>
+
+    
+    <div style="background: #f4f4f4; padding: 20px;">
+        {% for entry in data %}
+            <p><strong>{{ entry.speaker }}:</strong> {{ entry.text }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% endblock %}

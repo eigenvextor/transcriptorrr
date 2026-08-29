@@ -1,4 +1,5 @@
 import datetime
+from tqdm import tqdm
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering, DBSCAN
 import torch
@@ -6,7 +7,8 @@ from pyannote.audio import Audio
 from pyannote.core import Segment
 from speechbrain.inference.speaker import EncoderClassifier
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-import utils
+from src import utils
+
 
 class TranscriptionModel():
     def __init__(self, model_name):
@@ -28,14 +30,14 @@ class TranscriptionModel():
             return_timestamps=True,
             model_kwargs={
                 "low_cpu_mem_usage": True, 
-                "use_safetensors": True # needed along w low_cpu_mem_usage for performance
+                "use_safetensors": True, # needed along w low_cpu_mem_usage for performance
             }
         )
         
 
     def transcribe(self, m_id):
         path = utils.get_wav_path(m_id)
-        result = self.pipe(path)
+        result = self.pipe(str(path)) # expects str/ array
         transcripts = result["text"]
         chunks = result["chunks"]
         return transcripts, chunks
@@ -59,8 +61,9 @@ class DiarizationModel:
             # run_opts={"device": self.device}
         )
 
-    def diarization(self, m_id, chunks, num_speakers, metric="euclidean", linkage="ward"):
-        num_speakers = min(max(round(num_speakers), 1), len(chunks))
+    def diarization(self, m_id, timestamps, num_speakers, metric="euclidean", linkage="ward"):
+        chunks = timestamps.copy()
+        num_speakers = min(max(round(int(num_speakers)), 1), len(chunks))
         if len(chunks) == 1:
             chunks[0]["speaker"] = "SPEAKER 1"
         else:
@@ -100,11 +103,12 @@ class DiarizationModel:
             for i in range(len(chunks)):
                 chunks[i]["speaker"] = f"SPEAKER {(labels[i]+1)}"
 
-            output = ""
-            for (i, chunk) in enumerate(chunks):
-                if i==0 or chunks[i-1]["speaker"] != chunk["speaker"]:
-                    if i!= 0:
-                        output += "\n\n"
-                    output += chunk["speaker"] + " " + str(datetime.timedelta(seconds=round(chunk["timestamp"][0]))) + "\n\n"
-                output += chunk["text"][1:] + " "
-            return output
+            # output = ""
+            # for (i, chunk) in enumerate(chunks):
+            #     if i==0 or chunks[i-1]["speaker"] != chunk["speaker"]:
+            #         if i!= 0:
+            #             output += "\n\n"
+            #         output += chunk["speaker"] + " " + str(datetime.timedelta(seconds=round(chunk["timestamp"][0]))) + "\n\n"
+            #     output += chunk["text"][1:] + " "
+
+            return chunks

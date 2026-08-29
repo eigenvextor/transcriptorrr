@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+    <head>
+        {% if title %}
+        <title>{{ title }} - transcriptorrr</title>
+        {% else %}
+        <title>welcome to transcriptorrr</title>
+        {% endif %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <div>
+            transcriptorrr: 
+            <a href="{{ url_for('index') }}">home</a>
+            <a href="{{ url_for('generate_transcripts') }}">generate-transcripts</a>
+        </div>
+        <hr>
+        
+        {% block content %}{% endblock %}
+
+        
+        <div id="status-banner">
+            <span id="status-text"></span>
+        </div>
+
+        <script>
+            // ask the server for the status every 3000 milliseconds (3 seconds)
+            setInterval(function() {
+                fetch('/api/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        const banner = document.getElementById('status-banner');
+                        const textSpan = document.getElementById('status-text');
+                        
+                        if (data.is_running) {
+                            banner.style.display = 'block';
+                            banner.style.backgroundColor = '#2196F3';
+                            textSpan.innerText = data.message;
+                        } else if (data.message.includes("Finished") || data.message.includes("Error")) {
+                            // keep banner up but change color if it just finished or failed
+                            banner.style.display = 'block';
+                            banner.style.backgroundColor = data.message.includes("Error") ? '#f44336' : '#4CAF50'; // Red or Green
+                            textSpan.innerText = data.message;
+                        } else {
+                            // hide banner if nothing is happening
+                            banner.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error("Error fetching status:", error));
+            }, 3000);
+        </script>
+    </body>
+</html>

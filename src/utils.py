@@ -1,13 +1,14 @@
+import wave
+import contextlib
 import subprocess
 from pathlib import Path
 
-import wave
-import contextlib
+import config
 
 def get_wav_path(m_id):
-    path = str(Path(__file__).parent.parent)
-    audio_path = f"{path}/media/videos/{m_id}.wav"
-    video_path = f"{path}/media/videos/{m_id}.mp4"
+    path = config.MEDIA_DIR
+    audio_path = path / f"videos/{m_id}.wav"
+    video_path = path / f"videos/{m_id}.mp4"
     
     if not Path(video_path).exists():
         print(f"Video file {m_id}.mp4 doesn't exist")
@@ -27,7 +28,10 @@ def get_wav_path(m_id):
             return
 
 def get_duration(path):
-  with contextlib.closing(wave.open(path,'r')) as f:
+  with contextlib.closing(wave.open(str(path),'r')) as f:
     frames = f.getnframes()
     rate = f.getframerate()
     return frames / float(rate)
+
+def validate_json():
+    pass
